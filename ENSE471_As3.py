@@ -66,10 +66,16 @@ from itertools import combinations
 
 class InputHandler (Widget):
 
+  # Player 1 controls
   left = BooleanProperty(False)
   right = BooleanProperty(False)
   down = BooleanProperty(False)
   up = BooleanProperty(False)
+  # Player 2 controls
+  a = BooleanProperty(False)
+  d = BooleanProperty(False)
+  s = BooleanProperty(False)
+  w = BooleanProperty(False)
 
   def __init__(self, **kwargs):
     self._keyboard = Window.request_keyboard(self._keyboard_closed, self)
@@ -90,6 +96,14 @@ class InputHandler (Widget):
       self.left = True
     if keycode[1] == 'right':
       self.right = True
+    if keycode[1] == 'w':
+      self.w = True
+    if keycode[1] == 's':
+      self.s = True
+    if keycode[1] == 'a':
+      self.a = True
+    if keycode[1] == 'd':
+      self.d = True
 
   def _on_keyboard_up(self, keyboard, keycode):
     if keycode[1] == 'up':
@@ -100,15 +114,24 @@ class InputHandler (Widget):
       self.left = False
     if keycode[1] == 'right':
       self.right = False
+    if keycode[1] == 'w':
+      self.w = False
+    if keycode[1] == 's':
+      self.s = False
+    if keycode[1] == 'a':
+      self.a = False
+    if keycode[1] == 'd':
+      self.d = False
 
 class WinMessage (Label):
-  
+
   player = StringProperty("")
 
 class Game (FloatLayout):
 
   world = ObjectProperty(None)
-  player = ObjectProperty(None)
+  player_1 = ObjectProperty(None)
+  player_2 = ObjectProperty(None)
   enemies = []
   num_enemies = 10
   inputHandler = ObjectProperty(InputHandler())
@@ -116,9 +139,11 @@ class Game (FloatLayout):
   def __init__(self, **kwargs):
     FloatLayout.__init__(self, **kwargs)
     self.world = World()
-    self.player = Player(x = 100, y = 100, r = 50, color = [1,0,0,1])
+    self.player_1 = Player(x = 100, y = 100, r = 50, color = [1,0,0,1])
+    self.player_2 = Player(x = Window.width - 100, y = Window.height - 100, r = 50, color = [0,1,0,1])
     self.add_widget(self.world)
-    self.add_widget(self.player)
+    self.add_widget(self.player_1)
+    self.add_widget(self.player_2)
     for i in range(self.num_enemies):
       self.enemies.append(
         Enemy(x = r.randint(40, 810), y = r.randint(40, 440),
@@ -130,16 +155,23 @@ class Game (FloatLayout):
 
   def update (self, *args):
     # Check win conditions
-    if (not self.enemies):
+    if (self.player_1.r <= 0):
+      winMessage = WinMessage(player = "Player 2")
+      self.add_widget(winMessage)
+      return False
+    elif (self.player_2.r <= 0):
       winMessage = WinMessage(player = "Player 1")
       self.add_widget(winMessage)
       return False
 
     # Player move function
-    self.player.move(self.inputHandler)
+    self.player_1.move(self.inputHandler, {'up':"up", 'down':"down", 'left':"left", 'right':"right"})
+    self.player_2.move(self.inputHandler, {'up':"w", 'down':"s", 'left':"a", 'right':"d"})
     # Collision detection for player and all enemies and enemy move function
+    self.player_1.collisionResolution(self.player_1, self.player_2)
     for i in range(len(self.enemies)):
-      self.player.collisionResolution(self.player, self.enemies[i])
+      self.player_1.collisionResolution(self.player_1, self.enemies[i])
+      self.player_2.collisionResolution(self.player_2, self.enemies[i])
       self.enemies[i].move()
       # for j in range(len(self.num_enemies)):
       #   if (i != j):
@@ -154,6 +186,10 @@ class Game (FloatLayout):
     self.clean()
 
   def clean (self, *args):
+    if (self.player_1.r <= 0):
+      self.remove_widget(self.player_1)
+    if (self.player_2.r <= 0):
+      self.remove_widget(self.player_2)
     for enemy in self.enemies:
       if (enemy.r <= 0):
         self.remove_widget(enemy)
@@ -250,15 +286,19 @@ class Player (Cell):
   def __init__(self, **kwargs):
     Cell.__init__(self, **kwargs)
 
-  def move(self, inputHandler):
+  def move(self, inputHandler, controls):
     # Apply input
-    if (inputHandler.left):
+    if (inputHandler.left and controls['left'] is "left" or
+        inputHandler.a and controls['left'] is "a"):
       self.v_x -= 0.1
-    if (inputHandler.right):
+    if (inputHandler.right and controls['right'] is "right" or
+        inputHandler.d and controls['right'] is "d"):
       self.v_x += 0.1
-    if (inputHandler.up):
+    if (inputHandler.up and controls['up'] is "up" or
+        inputHandler.w and controls['up'] is "w"):
       self.v_y += 0.1
-    if (inputHandler.down):
+    if (inputHandler.down and controls['down'] is "down" or
+        inputHandler.s and controls['down'] is "s"):
       self.v_y -= 0.1
 
     # Apply movement rules
