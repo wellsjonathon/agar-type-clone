@@ -5,7 +5,7 @@
   "tasks": [
     {
       "label": "Run File",
-      "command": "C:\\Users\\Jonathon\\Anaconda3\\python.exe ${file}",
+      "command": "C:\\ProgramData\\Anaconda3\\python.exe ${file}",
       "type": "shell",
       "group": {
           "kind": "build",

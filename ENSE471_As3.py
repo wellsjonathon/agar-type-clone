@@ -37,6 +37,11 @@ dotKV = '''\
     Ellipse:
       pos: self.x - self.r, self.y - self.r
       size: self.r*2, self.r*2
+
+<WinMessage>:
+  size: self.texture_size
+  font_size: '50sp'
+  text: self.player + " wins!"
 \
 '''
 from kivy.lang import Builder
@@ -51,7 +56,8 @@ from kivy.core.window import Window
 from kivy.app import App
 from kivy.uix.widget import Widget
 from kivy.uix.floatlayout import FloatLayout
-from kivy.properties import ListProperty, NumericProperty, ObjectProperty, BooleanProperty
+from kivy.uix.label import Label
+from kivy.properties import ListProperty, NumericProperty, ObjectProperty, BooleanProperty, StringProperty
 from kivy.clock import Clock
 
 import random as r
@@ -95,12 +101,16 @@ class InputHandler (Widget):
     if keycode[1] == 'right':
       self.right = False
 
+class WinMessage (Label):
+  
+  player = StringProperty("")
+
 class Game (FloatLayout):
 
   world = ObjectProperty(None)
   player = ObjectProperty(None)
   enemies = []
-  num_enemies = 40
+  num_enemies = 10
   inputHandler = ObjectProperty(InputHandler())
 
   def __init__(self, **kwargs):
@@ -119,6 +129,12 @@ class Game (FloatLayout):
     # Add an enemy here
 
   def update (self, *args):
+    # Check win conditions
+    if (not self.enemies):
+      winMessage = WinMessage(player = "Player 1")
+      self.add_widget(winMessage)
+      return False
+
     # Player move function
     self.player.move(self.inputHandler)
     # Collision detection for player and all enemies and enemy move function
@@ -210,25 +226,19 @@ class Cell (Widget):
       smaller_area = smaller.r ** 2
       bigger_area = bigger.r ** 2
       area_sum = smaller_area + bigger_area
-
       # Compute the gain factor (sum of areas divided by smaller area)
       gain = area_sum / smaller_area
-
       # Compute the area ratio (sqrt of bigger area/smaller area)
       area_ratio = math.sqrt(bigger_area / smaller_area)
-
       # Consumption factor (smaller value = faster consumption)
       consumption_factor = 120
-
       # Decrease smaller cell's radius by (gain factor * area ratio / consumption factor)
       smaller.r -= (gain * area_ratio / consumption_factor)
-      smaller_area = smaller.r ** 2
-
       # Return if the smaller cell is consumed (negative radius)
       if (smaller.r < 0):
         return
-
       # Set bigger radius to (sqrt of sum of areas - smaller area)
+      smaller_area = smaller.r ** 2
       bigger.r = math.sqrt(area_sum - smaller_area)
 
     #   # Swap x and y velocities
