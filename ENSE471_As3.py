@@ -1,6 +1,77 @@
-# Add your World, Cell and Game code here
 dotKV = '''\
-<Game>:
+ScreenManagement:
+  title: title
+  game: game
+  TitleScreen:
+    id: title
+  GameScreen:
+    id: game
+
+<TitleScreen>:
+  name: 'TitleScreen'
+  BoxLayout:
+    orientation: 'vertical'
+    size_hint_x: 0.6
+    size_hint_y: 0.9
+    pos: (root.width / 2) - (self.size[0] / 2), (root.height / 2) - (self.size[1] / 2)
+    Label:
+      text: 'Not Agar'
+      font_size: '80sp'
+    BoxLayout:
+      orientation: 'horizontal'
+      Label:
+        text: 'P1'
+        font_size: '40sp'
+      Label:
+        text: ''
+      Label:
+        text: 'P2'
+        font_size: '40sp'
+    BoxLayout:
+      orientation: 'horizontal'
+      size_hint_y: 2.5
+      ColorWheel:
+        id: p1_color
+      Label:
+        text: ''
+      ColorWheel:
+        id: p2_color
+    BoxLayout:
+      orientation: 'horizontal'
+      size_hint_y: 0.8
+      Label:
+        canvas:
+          Color:
+            rgba: p1_color.color
+          Rectangle:
+            pos: [self.x, self.y]
+            size: [self.width, self.height]
+      Label:
+        text: ''
+      Label:
+        canvas:
+          Color:
+            rgba: p2_color.color
+          Rectangle:
+            pos: [self.x, self.y]
+            size: [self.width, self.height]
+    BoxLayout:
+      orientation: 'horizontal'
+      size_hint_y: 0.8
+      Label:
+        text: ''
+      Button:
+        text: 'Play'
+        on_release: 
+          app.root.current = 'GameScreen'
+          app.root.game.start(p1_color.color, p2_color.color)
+      Label:
+        text: ''
+
+<GameScreen>:
+  name: 'GameScreen'
+
+# <Game>:
   # Instantiate ObjectProperties
   # world: world
   # player: player
@@ -45,7 +116,7 @@ dotKV = '''\
 \
 '''
 from kivy.lang import Builder
-Builder.load_string(dotKV)
+
 
 from kivy.config import Config
 Config.set('graphics', 'fullscreen', '0')
@@ -56,14 +127,36 @@ from kivy.core.window import Window
 from kivy.app import App
 from kivy.uix.widget import Widget
 from kivy.uix.floatlayout import FloatLayout
+from kivy.uix.gridlayout import GridLayout
 from kivy.uix.label import Label
 from kivy.properties import ListProperty, NumericProperty, ObjectProperty, BooleanProperty, StringProperty
+from kivy.uix.screenmanager import ScreenManager, Screen, FadeTransition
+from kivy.uix.colorpicker import ColorWheel
 from kivy.clock import Clock
 
 import random as r
 import math as math
 from itertools import combinations
 
+class TitleScreen (Screen):
+  pass
+
+class GameScreen (Screen):
+
+  game = ObjectProperty(None)
+
+  def start(self, p1_color, p2_color):
+    self.game = Game(p1_color, p2_color)
+    self.add_widget(self.game)
+
+class ScreenManagement (ScreenManager):
+  
+  title = ObjectProperty(None)
+  game = ObjectProperty(None)
+
+root_widget = Builder.load_string(dotKV)
+  
+# TODO: Redo the hardcoded input handler code
 class InputHandler (Widget):
 
   # Player 1 controls
@@ -136,11 +229,11 @@ class Game (FloatLayout):
   num_enemies = 10
   inputHandler = ObjectProperty(InputHandler())
 
-  def __init__(self, **kwargs):
+  def __init__(self, p1_color, p2_color, **kwargs):
     FloatLayout.__init__(self, **kwargs)
     self.world = World()
-    self.player_1 = Player(x = 100, y = 100, r = 50, color = [1,0,0,1])
-    self.player_2 = Player(x = Window.width - 100, y = Window.height - 100, r = 50, color = [0,1,0,1])
+    self.player_1 = Player(x = 100, y = 100, r = 50, color = p1_color)
+    self.player_2 = Player(x = Window.width - 100, y = Window.height - 100, r = 50, color = p2_color)
     self.add_widget(self.world)
     self.add_widget(self.player_1)
     self.add_widget(self.player_2)
@@ -311,7 +404,7 @@ class Enemy (Cell):
 
 class GameApp(App):
   def build(self):
-    return Game()
+    return root_widget
 
 if __name__ == "__main__":
   GameApp().run()
