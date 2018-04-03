@@ -257,9 +257,26 @@ class Game (FloatLayout):
       self.add_widget(winMessage)
       return False
 
-    # Player move function
-    self.player_1.move(self.inputHandler, {'up':"up", 'down':"down", 'left':"left", 'right':"right"})
-    self.player_2.move(self.inputHandler, {'up':"w", 'down':"s", 'left':"a", 'right':"d"})
+    # Increment player counters
+    self.player_1.counter += 1
+    self.player_2.counter += 1
+    # Player move functions
+    self.player_1.move()
+    self.player_2.move()
+    # If possible, let players adjust velocity
+    if (self.player_1.counter >= 10):
+      moved = self.player_1.checkMove(self.inputHandler, {'up':"up", 'down':"down", 'left':"left", 'right':"right"})
+      if moved != [0,0]:
+        self.expel(self.player_1, moved)
+        self.player_1.r *= 0.9486832
+      self.player_1.counter = 0
+    if (self.player_2.counter >= 10):
+      moved = self.player_2.checkMove(self.inputHandler, {'up':"w", 'down':"s", 'left':"a", 'right':"d"})
+      if moved != [0,0]:
+        self.expel(self.player_2, moved)
+        self.player_2.r *= 0.9486832
+      self.player_2.counter = 0
+
     # Collision detection for player and all enemies and enemy move function
     self.player_1.collisionResolution(self.player_1, self.player_2)
     for i in range(len(self.enemies)):
@@ -287,6 +304,28 @@ class Game (FloatLayout):
       if (enemy.r <= 0):
         self.remove_widget(enemy)
         self.enemies.remove(enemy)
+
+  def expel(self, player, v_change):
+    rad = player.r * 0.316227766
+    if v_change[0] == 0:
+      pos_x = player.x
+      vel_x = 0
+    else:
+      pos_x = (1 if v_change[0] < 0 else -1) * player.r + player.x
+      vel_x = (1 if v_change[0] < 0 else -1) * abs(player.v_x) * 9
+    if v_change[1] == 0:
+      pos_y = player.y
+      vel_y = 0
+    else:
+      pos_y = (1 if v_change[1] < 0 else -1) * player.r + player.y
+      vel_y = (1 if v_change[1] < 0 else -1) * abs(player.v_y) * 9
+
+    enemy = Enemy(x = pos_x, y = pos_y, r = rad, v_x = vel_x, v_y = vel_y, 
+                  color = [r.uniform(0, 1.0), r.uniform(0, 1.0), r.uniform(0, 1.0), 1])
+
+    self.enemies.append(enemy)
+    # Add last element to the screen
+    self.add_widget(self.enemies[-1])
 
 
 class World (Widget):
@@ -376,26 +415,44 @@ class Cell (Widget):
 
 
 class Player (Cell):
+
+  counter = 0
+
   def __init__(self, **kwargs):
     Cell.__init__(self, **kwargs)
 
-  def move(self, inputHandler, controls):
+  def checkMove(self, inputHandler, controls):
+    change = [0.0,0.0]
     # Apply input
     if (inputHandler.left and controls['left'] is "left" or
         inputHandler.a and controls['left'] is "a"):
       self.v_x -= 0.1
+      change[0] = -0.1
     if (inputHandler.right and controls['right'] is "right" or
         inputHandler.d and controls['right'] is "d"):
       self.v_x += 0.1
+      change[0] = 0.1
     if (inputHandler.up and controls['up'] is "up" or
         inputHandler.w and controls['up'] is "w"):
       self.v_y += 0.1
+      change[1] = 0.1
     if (inputHandler.down and controls['down'] is "down" or
         inputHandler.s and controls['down'] is "s"):
       self.v_y -= 0.1
-
+      change[1] = -0.1
     # Apply movement rules
     super(Player, self).move()
+    return change
+
+  def expel(self, player):
+    vel_x = -player.v_x
+    vel_y = -player.v_y
+    rad = player.r * 0.316227766
+    pos_x = (1 if player.v_x < 0 else -1) * player.r + player.x
+    pos_y = (1 if player.v_y < 0 else -1) * player.r + player.y
+    enemy = Enemy(x = pos_x, y = pos_y, r = rad, v_x = vel_x, v_y = vel_y, 
+                  color = [r.uniform(0, 1.0), r.uniform(0, 1.0), r.uniform(0, 1.0), 1])
+    return enemy
 
 
 class Enemy (Cell):
